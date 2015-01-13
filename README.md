@@ -18,7 +18,7 @@ git clone git@github.com:leancloud/cloud-code-weixin.git
 
 ```
 module.exports = {
-  token: 'your_token'
+  token: '<your_token>'
 }
 ```
 * token: 微信开发者中心填写的 Token(令牌)。
@@ -46,36 +46,32 @@ avoscloud deploy && avoslcoud publish
 
 如果没有错误，请打开浏览器，根据自己的二级域名键入网址： `http://<yourPath>.avosapps.com`
 
-如果看到页面显示「微信接入实例应用」，恭喜你，部署成功！
-
-## 感受一下
-
-直接键入网址：`http://<yourPath>.avosapps.com/weixin/checkSignature`，你应该会看到该请求响应 401，页面显示「Unauthorized」。
-
-微信通过调用该 url 并传入适当的参数，我们的服务器会判断请求是否合法，并返回相应内容。微信再通过我们响应的内容判断开发者接入是否成功。因为我们调用该接口什么参数都没有提供，所以接口返回 「401 Unauthorized」，即无权访问。
+如果看到页面显示「微信接入示例应用」，恭喜你，部署成功！
 
 ### 微信开发者平台配置
 
 登录 微信开发者平台 -> 配置项 -> 填写服务器配置，将其中的：
 
-* URL：填写 `http://<yourPath>.avosapps.com/weixin/checkSignature`
+* URL：填写 `http://<yourPath>.avosapps.com/weixin`
 * Token：填写 `cloud/config/weixin.js` 中 `token` 配置的内容
 * 其他选项根据需要填写
 
-然后提交，正常情况，你应该看到服务器状态变为 `已启用`。
+然后提交。正常情况，你应该看到服务器状态变为 `已启用`。如果验证出错，会提示 `token验证失败`，请确认 url 是否填写正确。
 
+## 感受一下
+
+关注你的微信公众号，然后发送消息给他。如果没有问题，你会看到公众号自动回复。
 
 ## 开发相关
 
 ### 文件说明
 
 * `cloud/app.js`: 微信相关请求路由。
+  * `GET /`: 静态首页 `public/index.html`。
+  * `GET /weixin`: 提供微信服务的 path。
 * `cloud/weixin.js`: 微信相关签名验证等逻辑。
-
-### 路由信息
-
-* `GET /`: 静态首页 `public/index.html`。
-* `GET /weixin/checkSignature`: 提供微信验证开发者身份使用的 path。
+  * `checkSignature`: 验证签名。
+  * `receiveMessage`: 接受普通消息，并回复。
 
 
 
