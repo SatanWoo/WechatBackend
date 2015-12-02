@@ -1,75 +1,136 @@
-var express = require('express');
-var xml2js = require('xml2js');
-var weixin = require('cloud/weixin.js');
-var utils = require('express/node_modules/connect/lib/utils');
 
-// 解析微信的 xml 数据
-var xmlBodyParser = function (req, res, next) {
-  if (req._body) return next();
-  req.body = req.body || {};
-
-  // ignore GET
-  if ('GET' == req.method || 'HEAD' == req.method) return next();
-
-  // check Content-Type
-  if ('text/xml' != utils.mime(req)) return next();
-
-  // flag as parsed
-  req._body = true;
-
-  // parse
-  var buf = '';
-  req.setEncoding('utf8');
-  req.on('data', function(chunk){ buf += chunk });
-  req.on('end', function(){  
-    xml2js.parseString(buf, function(err, json) {
-      if (err) {
-          err.status = 400;
-          next(err);
-      } else {
-          req.body = json;
-          next();
-      }
-    });
-  });
+var config = {
+  token: '',
+  appid: '',
+  encodingAESKey: ''
 };
+
+var express = require('express');
+var wechat = require('wechat');
+var cookieParser = require('cookie-parser');
+var session = require('express-session');
+var bodyParser = require('bodyParser');
+
+var List  = require('wechat').List;
 
 var app = express();
 
-// App 全局配置
-app.set('views','cloud/views');   // 设置模板目录
-app.set('view engine', 'ejs');    // 设置 template 引擎
-app.use(express.bodyParser());    // 读取请求 body 的中间件
-app.use(xmlBodyParser);
+app.use({secret: 'keyboard cat', cookie: {maxAge: 60000}});
+app.use(cookieParser());
+app.use(express.query());
 
-// 使用 Express 路由 API 服务 /hello 的 HTTP GET 请求
-app.get('/hello', function(req, res) {
-  res.render('hello', { message: 'Congrats, you just set up your app!' });
-});
+List.add('view', [
+  ['回复{a}查看我的性别', function (info, req, res, next) {
+    res.reply('我是个妹纸哟');
+  }],
+  ['回复{c}查看我的性取向', '这样的事情怎么好意思告诉你啦- -']
+]);
 
-app.get('/weixin', function(req, res) {
-  console.log('weixin req:', req.query);
-  weixin.exec(req.query, function(err, data) {
-    if (err) {
-      return res.send(err.code || 500, err.message);
-    }
-    return res.send(data);
-  });
-})
+app.use('/weixin', wechat(config, wechat.text(function (message, req, res, next) {
+  var session = req.wxsession;
+  var message = req.weixin;
+ 
 
-app.post('/weixin', function(req, res) {
-  console.log('weixin req:', req.body);
-  weixin.exec(req.body, function(err, data) {
-    if (err) {
-      return res.send(err.code || 500, err.message);
-    }
-    var builder = new xml2js.Builder();
-    var xml = builder.buildObject(data);
-    console.log('res:', data)
-    res.set('Content-Type', 'text/xml');
-    return res.send(xml);
-  });
-})
+  if (message.Content == 'profile') {
+    res.wait('view');    
+  } else {
+    res.nowait("你好" + message.FromUserName + ', 你可以发送文字跟我聊天，发送照片让我打分。');
+  }
 
-// 最后，必须有这行代码来使 express 响应 HTTP 请求
-app.listen();
+}).image(function (message, req, res, next) {
+  // message为图片内容
+  // { ToUserName: 'gh_d3e07d51b513',
+  // FromUserName: 'oPKu7jgOibOA-De4u8J2RuNKpZRw',
+  // CreateTime: '1359124971',
+  // MsgType: 'image',
+  // PicUrl: 'http://mmsns.qpic.cn/mmsns/bfc815ygvIWcaaZlEXJV7NzhmA3Y2fc4eBOxLjpPI60Q1Q6ibYicwg/0',
+  // MediaId: 'media_id',
+  // MsgId: '5837397301622104395' }
+}).voice(function (message, req, res, next) {
+  // message为音频内容
+  // { ToUserName: 'gh_d3e07d51b513',
+  // FromUserName: 'oPKu7jgOibOA-De4u8J2RuNKpZRw',
+  // CreateTime: '1359125022',
+  // MsgType: 'voice',
+  // MediaId: 'OMYnpghh8fRfzHL8obuboDN9rmLig4s0xdpoNT6a5BoFZWufbE6srbCKc_bxduzS',
+  // Format: 'amr',
+  // MsgId: '5837397520665436492' }
+}).video(function (message, req, res, next) {
+  // message为视频内容
+  // { ToUserName: 'gh_d3e07d51b513',
+  // FromUserName: 'oPKu7jgOibOA-De4u8J2RuNKpZRw',
+  // CreateTime: '1359125022',
+  // MsgType: 'video',
+  // MediaId: 'OMYnpghh8fRfzHL8obuboDN9rmLig4s0xdpoNT6a5BoFZWufbE6srbCKc_bxduzS',
+  // ThumbMediaId: 'media_id',
+  // MsgId: '5837397520665436492' }
+}).shortvideo(function (message, req, res, next) {
+  // message为短视频内容
+  // { ToUserName: 'gh_d3e07d51b513',
+  // FromUserName: 'oPKu7jgOibOA-De4u8J2RuNKpZRw',
+  // CreateTime: '1359125022',
+  // MsgType: 'shortvideo',
+  // MediaId: 'OMYnpghh8fRfzHL8obuboDN9rmLig4s0xdpoNT6a5BoFZWufbE6srbCKc_bxduzS',
+  // ThumbMediaId: 'media_id',
+  // MsgId: '5837397520665436492' }
+}).location(function (message, req, res, next) {
+  // message为位置内容
+  // { ToUserName: 'gh_d3e07d51b513',
+  // FromUserName: 'oPKu7jgOibOA-De4u8J2RuNKpZRw',
+  // CreateTime: '1359125311',
+  // MsgType: 'location',
+  // Location_X: '30.283950',
+  // Location_Y: '120.063139',
+  // Scale: '15',
+  // Label: {},
+  // MsgId: '5837398761910985062' }
+}).link(function (message, req, res, next) {
+  // message为链接内容
+  // { ToUserName: 'gh_d3e07d51b513',
+  // FromUserName: 'oPKu7jgOibOA-De4u8J2RuNKpZRw',
+  // CreateTime: '1359125022',
+  // MsgType: 'link',
+  // Title: '公众平台官网链接',
+  // Description: '公众平台官网链接',
+  // Url: 'http://1024.com/',
+  // MsgId: '5837397520665436492' }
+}).event(function (message, req, res, next) {
+  // message为事件内容
+  // { ToUserName: 'gh_d3e07d51b513',
+  // FromUserName: 'oPKu7jgOibOA-De4u8J2RuNKpZRw',
+  // CreateTime: '1359125022',
+  // MsgType: 'event',
+  // Event: 'LOCATION',
+  // Latitude: '23.137466',
+  // Longitude: '113.352425',
+  // Precision: '119.385040',
+  // MsgId: '5837397520665436492' }
+}).device_text(function (message, req, res, next) {
+  // message为设备文本消息内容
+  // { ToUserName: 'gh_d3e07d51b513',
+  // FromUserName: 'oPKu7jgOibOA-De4u8J2RuNKpZRw',
+  // CreateTime: '1359125022',
+  // MsgType: 'device_text',
+  // DeviceType: 'gh_d3e07d51b513'
+  // DeviceID: 'dev1234abcd',
+  // Content: 'd2hvc3lvdXJkYWRkeQ==',
+  // SessionID: '9394',
+  // MsgId: '5837397520665436492',
+  // OpenID: 'oPKu7jgOibOA-De4u8J2RuNKpZRw' }
+}).device_event(function (message, req, res, next) {
+  // message为设备事件内容
+  // { ToUserName: 'gh_d3e07d51b513',
+  // FromUserName: 'oPKu7jgOibOA-De4u8J2RuNKpZRw',
+  // CreateTime: '1359125022',
+  // MsgType: 'device_event',
+  // Event: 'bind'
+  // DeviceType: 'gh_d3e07d51b513'
+  // DeviceID: 'dev1234abcd',
+  // OpType : 0, //Event为subscribe_status/unsubscribe_status时存在
+  // Content: 'd2hvc3lvdXJkYWRkeQ==', //Event不为subscribe_status/unsubscribe_status时存在
+  // SessionID: '9394',
+  // MsgId: '5837397520665436492',
+  // OpenID: 'oPKu7jgOibOA-De4u8J2RuNKpZRw' }
+})));
+
+module.exports = app;
