@@ -10,9 +10,11 @@
   "dependencies": {
     "body-parser": "^1.14.1",
     "cookie-parser": "^1.4.0",
+    "ejs": "^2.3.4",
     "express": "4.12.3",
     "express-session": "^1.12.1",
-    "wechat": "^2.0.3",
-    "leanengine":"^0.2.0"
+    "leanengine": "^0.2.0",
+    "pocket-sdk": "0.0.10",
+    "wechat": "^2.0.3"
   }
 }
